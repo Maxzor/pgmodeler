@@ -245,7 +245,7 @@ void SchemaView::configureObject()
 		this->bounding_rect=rect;
 
 		ObjectsScene *scene = dynamic_cast<ObjectsScene *>(this->scene());
-		this->setVisible(scene && scene->isLayerActive(schema->getLayer()));
+		this->setVisible(scene && scene->areLayersActive(schema->getLayer()));
 
 		this->setToolTip(schema->getName(true) +
 										 QString(" (") + schema->getTypeName() + QString(")") +

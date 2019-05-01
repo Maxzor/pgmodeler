@@ -511,6 +511,8 @@ class ModelWidget: public QWidget {
 
 		void updateModelLayers();
 
+		void updateLayersFromModel(void);
+
 	public slots:
 		void loadModel(const QString &filename);
 		void saveModel(const QString &filename);

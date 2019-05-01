@@ -28,7 +28,6 @@ BaseGraphicObject::BaseGraphicObject()
 	attributes[Attributes::FadedOut]=QString();
 	attributes[Attributes::Layer]=QString();
 	receiver_object=nullptr;
-	layer = 0;
 }
 
 void BaseGraphicObject::setProtected(bool value)
@@ -125,13 +124,13 @@ bool BaseGraphicObject::isGraphicObject(ObjectType type)
 				 type==ObjectType::ForeignTable);
 }
 
-void BaseGraphicObject::setLayer(unsigned layer)
+void BaseGraphicObject::setLayer(const vector<unsigned> &layer)
 {
 	setCodeInvalidated(this->layer != layer);
 	this->layer = layer;
 }
 
-unsigned BaseGraphicObject::getLayer()
+vector<unsigned> BaseGraphicObject::getLayer()
 {
 	return layer;
 }

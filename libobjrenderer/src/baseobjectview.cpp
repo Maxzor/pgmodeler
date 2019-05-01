@@ -590,7 +590,7 @@ double BaseObjectView::getFontFactor()
 	return font_config[Attributes::Global].font().pointSizeF()/DefaultFontSize;
 }
 
-void BaseObjectView::setLayer(unsigned layer)
+void BaseObjectView::setLayer(vector<unsigned> layer)
 {
 	BaseGraphicObject *graph_obj = dynamic_cast<BaseGraphicObject *>(this->getUnderlyingObject());
 
@@ -598,14 +598,15 @@ void BaseObjectView::setLayer(unsigned layer)
 		graph_obj->setLayer(layer);
 }
 
-unsigned BaseObjectView::getLayer()
+vector<unsigned> BaseObjectView::getDimensionalLayers()
 {
 	BaseGraphicObject *graph_obj = dynamic_cast<BaseGraphicObject *>(this->getUnderlyingObject());
 
 	if(graph_obj)
 		return graph_obj->getLayer();
 
-	return 0;
+	vector<unsigned> ret_v={0};
+	return(ret_v);
 }
 
 double BaseObjectView::getScreenDpiFactor()
