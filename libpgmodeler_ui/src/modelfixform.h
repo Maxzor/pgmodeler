@@ -28,6 +28,7 @@
 #include <QtWidgets>
 #include "globalattributes.h"
 #include "ui_modelfixform.h"
+#include "fileselectorwidget.h"
 
 class ModelFixForm: public QDialog, public Ui::ModelFixForm {
 	private:
@@ -41,6 +42,8 @@ class ModelFixForm: public QDialog, public Ui::ModelFixForm {
 		void hideEvent(QHideEvent *);
 
 	public:
+		FileSelectorWidget *cli_f_sel_wgt, *out_f_sel_wgt, *in_f_sel_wgt;
+
 		ModelFixForm(QWidget * parent = nullptr, Qt::WindowFlags f = Qt::Widget);
 
 	public slots:
@@ -49,7 +52,6 @@ class ModelFixForm: public QDialog, public Ui::ModelFixForm {
 	private slots:
 		void enableFix();
 		void fixModel();
-		void selectFile();
 		void updateOutput();
 		void handleProcessFinish(int res);
 

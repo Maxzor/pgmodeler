@@ -18,10 +18,20 @@
 
 #include "metadatahandlingform.h"
 #include "pgmodeleruins.h"
+#include <QFileDialog>
 
 MetadataHandlingForm::MetadataHandlingForm(QWidget *parent, Qt::WindowFlags f) : QDialog(parent, f)
 {
 	setupUi(this);
+
+	delete horizontalLayout_3->takeAt(horizontalLayout_3->indexOf(label_5));
+	delete label_5;
+	f_sel_wgt=new FileSelectorWidget(tab);
+	// does not "work" here?
+	//delete horizontalLayout_3->replaceWidget(label_5, f_sel_wgt,Qt::FindChildrenRecursively);
+	horizontalLayout_3->addWidget(f_sel_wgt);
+
+
 
 	root_item=nullptr;
 	model_wgt=nullptr;
@@ -82,17 +92,18 @@ MetadataHandlingForm::MetadataHandlingForm(QWidget *parent, Qt::WindowFlags f) :
 	connect(extract_from_cmb, &QComboBox::currentTextChanged,
 					[&](){ apply_btn->setDisabled(extract_from_cmb->count() == 0); });
 
-	connect(select_file_tb, &QToolButton::clicked,
-					[&](){	selectFile(extract_restore_rb->isChecked() ||
-														 extract_only_rb->isChecked()); });
-
+	connect(restore_rb, SIGNAL(toggled(bool)), this, SLOT(updateFileSelector()));
+	connect(extract_restore_rb, SIGNAL(toggled(bool)), this, SLOT(updateFileSelector()));
+	connect(extract_only_rb, SIGNAL(toggled(bool)), this, SLOT(updateFileSelector()));
 	connect(extract_from_cmb, SIGNAL(currentIndexChanged(int)), this, SLOT(enableMetadataHandling()));
-	connect(backup_file_edt, SIGNAL(textChanged(QString)), this, SLOT(enableMetadataHandling()));
+	connect(f_sel_wgt, SIGNAL(s_fileSelected(QFileInfo*)), this, SLOT(enableMetadataHandling()));
 	connect(restore_rb, SIGNAL(toggled(bool)), this, SLOT(enableMetadataHandling()));
 	connect(extract_restore_rb, SIGNAL(toggled(bool)), this, SLOT(enableMetadataHandling()));
 	connect(extract_only_rb, SIGNAL(toggled(bool)), this, SLOT(enableMetadataHandling()));
 	connect(select_all_btn, SIGNAL(clicked(bool)), this, SLOT(selectAllOptions()));
 	connect(clear_all_btn, SIGNAL(clicked(bool)), this, SLOT(selectAllOptions()));
+
+	updateFileSelector();
 }
 
 void MetadataHandlingForm::enableMetadataHandling()
@@ -103,9 +114,9 @@ void MetadataHandlingForm::enableMetadataHandling()
 	apply_to_edt->setVisible(!extract_only_rb->isChecked());
 
 	apply_btn->setEnabled(model_wgt &&
-												(((extract_restore_rb->isChecked() && extract_from_cmb->count() > 0) ||
-													(extract_only_rb->isChecked() && extract_from_cmb->count() > 0 && !backup_file_edt->text().isEmpty()) ||
-													(restore_rb->isChecked() && !backup_file_edt->text().isEmpty()))));
+							(((extract_restore_rb->isChecked() && extract_from_cmb->count() > 0) ||
+								(extract_only_rb->isChecked() && extract_from_cmb->count() > 0 && !f_sel_wgt->currentFileString().isEmpty()) ||
+								(restore_rb->isChecked() && !f_sel_wgt->currentFileString().isEmpty()))));
 }
 
 void MetadataHandlingForm::selectAllOptions()
@@ -149,8 +160,8 @@ void MetadataHandlingForm::setModelWidgets(QList<ModelWidget *> models)
 
 void MetadataHandlingForm::handleObjectsMetada()
 {
-	if(!backup_file_edt->text().isEmpty() &&
-		 backup_file_edt->text() == model_wgt->getFilename())
+	if(!f_sel_wgt->currentFileString().isEmpty() &&
+		 f_sel_wgt->currentFileString() == model_wgt->getFilename())
 		throw Exception(tr("The backup file cannot be the same as the input model!"),
 										ErrorCode::Custom,	__PRETTY_FUNCTION__,__FILE__,__LINE__);
 
@@ -186,13 +197,13 @@ void MetadataHandlingForm::handleObjectsMetada()
 			extract_model=reinterpret_cast<DatabaseModel *>(extract_from_cmb->currentData(Qt::UserRole).value<void *>());
 
 			if(extract_only_rb->isChecked())
-				metadata_file = backup_file_edt->text();
+				metadata_file = f_sel_wgt->currentFileString();
 			else
 			{
 				//Configuring the temporary metadata file
 				tmp_file.setFileTemplate(GlobalAttributes::getTemporaryDir() +
-																 GlobalAttributes::DirSeparator +
-																 QString("%1_metadata_XXXXXX.%2").arg(extract_model->getName()).arg(QString("omf")));
+															 GlobalAttributes::DirSeparator +
+															 QString("%1_metadata_XXXXXX.%2").arg(extract_model->getName()).arg(QString("omf")));
 
 				tmp_file.open();
 				metadata_file=tmp_file.fileName();
@@ -202,24 +213,24 @@ void MetadataHandlingForm::handleObjectsMetada()
 			connect(extract_model, SIGNAL(s_objectLoaded(int,QString,unsigned)), this, SLOT(updateProgress(int,QString,unsigned)), Qt::UniqueConnection);
 
 			root_item=PgModelerUiNs::createOutputTreeItem(output_trw,
-																										PgModelerUiNs::formatMessage(tr("Extracting metadata to file `%1'").arg(metadata_file)),
-																										QPixmap(PgModelerUiNs::getIconPath("msgbox_info")), nullptr);
+										PgModelerUiNs::formatMessage(tr("Extracting metadata to file `%1'").arg(metadata_file)),
+										QPixmap(PgModelerUiNs::getIconPath("msgbox_info")), nullptr);
 
 			extract_model->saveObjectsMetadata(metadata_file, options);
 
-			if(extract_restore_rb->isChecked() && !backup_file_edt->text().isEmpty())
+			if(extract_restore_rb->isChecked() && !f_sel_wgt->currentFileString().isEmpty())
 			{
 				root_item->setExpanded(false);
 				root_item=PgModelerUiNs::createOutputTreeItem(output_trw,
-																											PgModelerUiNs::formatMessage(tr("Saving backup metadata to file `%1'").arg(backup_file_edt->text())),
-																											QPixmap(PgModelerUiNs::getIconPath("msgbox_info")), nullptr);
+											PgModelerUiNs::formatMessage(tr("Saving backup metadata to file `%1'").arg(f_sel_wgt->currentFileString())),
+											QPixmap(PgModelerUiNs::getIconPath("msgbox_info")), nullptr);
 
-				model_wgt->getDatabaseModel()->saveObjectsMetadata(backup_file_edt->text());
+				model_wgt->getDatabaseModel()->saveObjectsMetadata(f_sel_wgt->currentFileString());
 			}
 		}
 		else
 		{
-			metadata_file=backup_file_edt->text();
+			metadata_file=f_sel_wgt->currentFileString();
 		}
 
 		if(root_item)
@@ -228,8 +239,8 @@ void MetadataHandlingForm::handleObjectsMetada()
 		if(!extract_only_rb->isChecked())
 		{
 			root_item=PgModelerUiNs::createOutputTreeItem(output_trw,
-																										PgModelerUiNs::formatMessage(tr("Applying metadata from file `%1'").arg(metadata_file)),
-																										QPixmap(PgModelerUiNs::getIconPath("msgbox_info")), nullptr);
+					PgModelerUiNs::formatMessage(tr("Applying metadata from file `%1'").arg(metadata_file)),
+					QPixmap(PgModelerUiNs::getIconPath("msgbox_info")), nullptr);
 
 			model_wgt->setUpdatesEnabled(false);
 			model_wgt->getDatabaseModel()->loadObjectsMetadata(metadata_file, options);
@@ -257,8 +268,8 @@ void MetadataHandlingForm::handleObjectsMetada()
 			disconnect(extract_model, nullptr, this, nullptr);
 
 		PgModelerUiNs::createOutputTreeItem(output_trw,
-																				PgModelerUiNs::formatMessage(e.getErrorMessage()),
-																				icon, nullptr);
+				PgModelerUiNs::formatMessage(e.getErrorMessage()),
+				icon, nullptr);
 
 		ico_lbl->setPixmap(icon);
 		progress_lbl->setText(tr("Metadata processing aborted!"));
@@ -274,31 +285,6 @@ void MetadataHandlingForm::showEvent(QShowEvent *)
 		apply_btn->setEnabled(false);
 		settings_tbw->setEnabled(false);
 	}
-}
-
-void MetadataHandlingForm::selectFile(bool is_output)
-{
-	QFileDialog file_dlg;
-
-	file_dlg.setNameFilter(tr("Objects metadata file (*.omf);;All files (*.*)"));
-	file_dlg.setWindowTitle(tr("Select file"));
-
-	if(!is_output)
-	{
-		file_dlg.setFileMode(QFileDialog::ExistingFiles);
-		file_dlg.setAcceptMode(QFileDialog::AcceptOpen);
-		file_dlg.selectFile(backup_file_edt->text());
-	}
-	else
-	{
-		file_dlg.setOption(QFileDialog::DontConfirmOverwrite, false);
-		file_dlg.setFileMode(QFileDialog::AnyFile);
-		file_dlg.setAcceptMode(QFileDialog::AcceptSave);
-		file_dlg.selectFile(model_wgt->getDatabaseModel()->getName() + QString(".omf"));
-	}
-
-	if(file_dlg.exec()==QFileDialog::Accepted && !file_dlg.selectedFiles().isEmpty())
-		backup_file_edt->setText(file_dlg.selectedFiles().at(0));
 }
 
 void MetadataHandlingForm::updateProgress(int progress, QString msg, unsigned int type_id)
@@ -321,4 +307,28 @@ void MetadataHandlingForm::updateProgress(int progress, QString msg, unsigned in
 	progress_lbl->setText(fmt_msg);
 	ico_lbl->setPixmap(icon);
 	progress_pb->setValue(progress);
+}
+
+void MetadataHandlingForm::updateFileSelector(){
+	extern FileSelector FSel_SQLOutput;
+	auto old_d_sel=f_sel_wgt->file_selector;
+	if(extract_restore_rb->isChecked() || extract_only_rb->isChecked())
+	{
+		f_sel_wgt->file_selector=	new FileSelector{
+				QFileDialog::AcceptSave, QFileDialog::AnyFile,
+				"Save object-metadata file :","omf", {""},{"Objects metadata file (*.omf);;All files (*.*)"},
+				{"","","Set","Cancel"},	{false, false},	false};
+		//todo f_sel_wgt.selectFile(f_sel_wgt->currentFileString());
+	}
+	else
+		f_sel_wgt->file_selector=	new FileSelector{
+				QFileDialog::AcceptOpen, QFileDialog::ExistingFile,
+				"Object-metadata file input :", "omf", {""},{"Objects metadata file (*.omf);;All files (*.*)"},
+				{"","","Set","Cancel"},	{false, true},	false};
+		//todo f_sel_wgt.setFile(model_wgt->getDatabaseModel()->getName() + QString(".omf"));
+	if(old_d_sel!=&FSel_SQLOutput)
+		delete old_d_sel;
+
+	//Update the string
+	f_sel_wgt->handleTextChanged(f_sel_wgt->currentFileString());
 }
