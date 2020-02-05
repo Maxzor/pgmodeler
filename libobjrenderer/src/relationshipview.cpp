@@ -2039,28 +2039,44 @@ void RelationshipView::configureLabelPosition(unsigned label_id, double x, doubl
 
 QRectF RelationshipView::__boundingRect()
 {
-	unsigned i;
-	QRectF rect, brect;
-	vector<QPointF> points=dynamic_cast<BaseRelationship *>(this->getUnderlyingObject())->getPoints();
+	auto rect=QRectF(descriptor->mapToScene(
+						 descriptor->boundingRect()).boundingRect());
 
-	brect = QRectF(QPointF(descriptor->pos().x(), descriptor->pos().y()), descriptor->boundingRect().size());
+	for(const auto &conn_point : conn_points)
+		rect=rect.united(QRectF(conn_point.x(), conn_point.y(), 0.5, 0.5));
 
-	for(auto &p : points)
-	{
-		brect = rect.united(QRectF(p.x() - GraphicPointRadius, p.y() - GraphicPointRadius,
-															 p.x() + GraphicPointRadius, p.y() + GraphicPointRadius));
-	}
+	for(int i=0;i<3;i++)
+		if(labels[i]->pos()!=QPointF(0,0))
+			rect=rect.united(labels[i]->mapToScene(
+								 labels[i]->boundingRect()).boundingRect());
 
-	//Checks if some label is out of reference dimension
-	for(i=0; i < 3; i++)
-	{
-		if(labels[i] && labels[i]->isVisible())
-		{
-			rect.setTopLeft(labels[i]->scenePos());
-			rect.setSize(labels[i]->boundingRect().size());
-			brect = brect.united(rect);
-		}
-	}
+	for(const auto &graph_point : graph_points)
+		rect=rect.united(QRectF(graph_point->mapToScene(
+									graph_point->boundingRect()).boundingRect()));
 
-	return brect;
+
+//	unsigned i;
+//	QRectF rect, brect;
+//	vector<QPointF> points=dynamic_cast<BaseRelationship *>(this->getUnderlyingObject())->getPoints();
+
+//	brect = QRectF(QPointF(descriptor->pos().x(), descriptor->pos().y()), descriptor->boundingRect().size());
+
+//	for(auto &p : points)
+//	{
+//		brect = rect.united(QRectF(p.x() - GraphicPointRadius, p.y() - GraphicPointRadius,
+//															 p.x() + GraphicPointRadius, p.y() + GraphicPointRadius));
+//	}
+
+//	//Checks if some label is out of reference dimension
+//	for(i=0; i < 3; i++)
+//	{
+//		if(labels[i] && labels[i]->isVisible())
+//		{
+//			rect.setTopLeft(labels[i]->scenePos());
+//			rect.setSize(labels[i]->boundingRect().size());
+//			brect = brect.united(rect);
+//		}
+//	}
+
+	return rect;
 }

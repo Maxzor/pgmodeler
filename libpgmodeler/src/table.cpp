@@ -361,33 +361,6 @@ QString Table::__getCodeDefinition(unsigned def_type, bool incl_rel_added_objs)
 	attributes[Attributes::RlsEnabled]=(rls_enabled ? Attributes::True : QString());
 	attributes[Attributes::RlsForced]=(rls_forced ? Attributes::True : QString());
 	attributes[Attributes::CopyTable]=QString();
-	attributes[Attributes::AncestorTable]=QString();
-	attributes[Attributes::Tag]=QString();
-	attributes[Attributes::Partitioning]=~partitioning_type;
-	attributes[Attributes::PartitionKey]=QString();
-	attributes[Attributes::PartitionBoundExpr]=part_bounding_expr;
-
-	QString tmp_lay=nullptr;
-	for (size_t l_dim=0; l_dim<layer.size();l_dim++)
-	{
-		tmp_lay+=QString::number(layer[l_dim]);
-		if(l_dim< layer.size()-1)
-				tmp_lay+="|";
-	}
-	attributes[Attributes::Layer]=tmp_lay;
-
-	attributes[Attributes::Pagination]=(pagination_enabled ? Attributes::True : QString());
-	attributes[Attributes::CollapseMode]=QString::number(enum_cast(collapse_mode));
-	attributes[Attributes::AttribsPage]=(pagination_enabled ? QString::number(curr_page[AttribsSection]) : QString());
-	attributes[Attributes::ExtAttribsPage]=(pagination_enabled ? QString::number(curr_page[ExtAttribsSection]) : QString());
-
-	for(auto part_key : partition_keys)
-		part_keys_code+=part_key.getCodeDefinition(def_type);
-
-	if(def_type == SchemaParser::SqlDefinition)
-		attributes[Attributes::PartitionKey]=part_keys_code.join(',');
-	else
-		attributes[Attributes::PartitionKey]=part_keys_code.join(' ');
 
 	if(def_type==SchemaParser::SqlDefinition && copy_table)
 		attributes[Attributes::CopyTable]=copy_table->getName(true) + copy_op.getSQLDefinition();

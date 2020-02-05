@@ -225,7 +225,7 @@ void ObjectsScene::addDimension(void)
 		auto obj_view = dynamic_cast<BaseObjectView *>(item);
 		if(obj_view && !obj_view->parentItem())
 		{
-			auto base_graph_obj = dynamic_cast<BaseGraphicObject * >(obj_view->getSourceObject());
+			auto base_graph_obj = dynamic_cast<BaseGraphicObject * >(obj_view->getUnderlyingObject());
 			if(base_graph_obj)
 			{
 				auto lays=base_graph_obj->getLayer();
@@ -247,7 +247,7 @@ void ObjectsScene::removeDimension(int d_idx)
 		auto obj_view = dynamic_cast<BaseObjectView *>(item);
 		if(obj_view && !obj_view->parentItem())
 		{
-			auto base_graph_obj = dynamic_cast<BaseGraphicObject * >(obj_view->getSourceObject());
+			auto base_graph_obj = dynamic_cast<BaseGraphicObject * >(obj_view->getUnderlyingObject());
 			if(base_graph_obj)
 			{
 				auto lays=base_graph_obj->getLayer();
@@ -323,7 +323,7 @@ void ObjectsScene::setActiveLayers(const vector<QList<unsigned>> &idxs)
 			if(!obj_view->isVisible() && is_in_layers)
 			{
 				if(!sch_view ||
-					 (sch_view && dynamic_cast<Schema *>(sch_view->getSourceObject())->isRectVisible()))
+					 (sch_view && dynamic_cast<Schema *>(sch_view->getUnderlyingObject())->isRectVisible()))
 				 obj_view->setVisible(true);
 			}
 			else if(obj_view->isVisible() && !is_in_layers)
@@ -489,57 +489,78 @@ QRectF ObjectsScene::itemsBoundingRect(bool seek_only_db_objs, bool selected_onl
 		return QGraphicsScene::itemsBoundingRect();
 	else
 	{
-		QRectF rect=QGraphicsScene::itemsBoundingRect();
+//		QRectF rect=QGraphicsScene::itemsBoundingRect();
 		QList<QGraphicsItem *> items= (selected_only ? this->selectedItems() : this->items());
-		double x=rect.width(), y=rect.height(), x2 = -10000, y2 = -10000;
-		BaseObjectView *obj_view=nullptr;
-		QPointF pnt;
-		BaseGraphicObject *graph_obj=nullptr;
+//		double x=rect.width(), y=rect.height(), x2 = -10000, y2 = -10000;
+//		BaseObjectView *obj_view=nullptr;
+//		QPointF pnt;
+//		BaseGraphicObject *graph_obj=nullptr;
 
-		for(auto &item : items)
+//		for(auto &item : items)
+//		{
+//			obj_view=dynamic_cast<BaseObjectView *>(item);
+
+//			if(obj_view && obj_view->isVisible())
+//			{
+//				graph_obj=dynamic_cast<BaseGraphicObject *>(obj_view->getUnderlyingObject());
+
+//				if(graph_obj)
+//				{
+//					if(graph_obj->getObjectType()!=ObjectType::Relationship &&
+//							graph_obj->getObjectType()!=ObjectType::BaseRelationship)
+//						pnt=graph_obj->getPosition();
+//					else
+//						pnt=dynamic_cast<RelationshipView *>(obj_view)->__boundingRect().topLeft();
+
+//					if(pnt.x() < x)
+//						x=pnt.x();
+
+//					if(pnt.y() < y)
+//						y=pnt.y();
+
+//					if(selected_only)
+//					{
+//						if(graph_obj->getObjectType()!=ObjectType::Relationship &&
+//							 graph_obj->getObjectType()!=ObjectType::BaseRelationship)
+//							pnt = pnt + dynamic_cast<BaseObjectView *>(obj_view)->boundingRect().bottomRight();
+//						else
+//							pnt = pnt +  dynamic_cast<RelationshipView *>(obj_view)->__boundingRect().bottomRight();
+
+//						if(pnt.x() > x2)
+//							x2 = pnt.x();
+
+//						if(pnt.y() > y2)
+//							y2 = pnt.y();
+//					}
+//				}
+//			}
+//		}
+
+//		if(selected_only)
+//			return QRectF(QPointF(x, y), QPointF(x2, y2));
+//		else
+//			return QRectF(QPointF(x, y), rect.bottomRight());
+
+		QRectF rect;
+		QPolygonF polygon;
+		if(dynamic_cast<RelationshipView *>(items.front()))
+			rect=dynamic_cast<RelationshipView *>(items.front())->__boundingRect();
+		else
 		{
-			obj_view=dynamic_cast<BaseObjectView *>(item);
-
-			if(obj_view && obj_view->isVisible())
-			{
-				graph_obj=dynamic_cast<BaseGraphicObject *>(obj_view->getUnderlyingObject());
-
-				if(graph_obj)
-				{
-					if(graph_obj->getObjectType()!=ObjectType::Relationship &&
-							graph_obj->getObjectType()!=ObjectType::BaseRelationship)
-						pnt=graph_obj->getPosition();
-					else
-						pnt=dynamic_cast<RelationshipView *>(obj_view)->__boundingRect().topLeft();
-
-					if(pnt.x() < x)
-						x=pnt.x();
-
-					if(pnt.y() < y)
-						y=pnt.y();
-
-					if(selected_only)
-					{
-						if(graph_obj->getObjectType()!=ObjectType::Relationship &&
-							 graph_obj->getObjectType()!=ObjectType::BaseRelationship)
-							pnt = pnt + dynamic_cast<BaseObjectView *>(obj_view)->boundingRect().bottomRight();
-						else
-							pnt = pnt +  dynamic_cast<RelationshipView *>(obj_view)->__boundingRect().bottomRight();
-
-						if(pnt.x() > x2)
-							x2 = pnt.x();
-
-						if(pnt.y() > y2)
-							y2 = pnt.y();
-					}
-				}
-			}
+			auto item=dynamic_cast<BaseObjectView *>(items.front());
+			rect=QRectF(item->mapToScene(item->boundingRect()).boundingRect());
 		}
 
-		if(selected_only)
-			return QRectF(QPointF(x, y), QPointF(x2, y2));
-		else
-			return QRectF(QPointF(x, y), rect.bottomRight());
+		for(const auto &item : items)
+		{
+			if(auto rel_view=dynamic_cast<RelationshipView *>(item))
+				rect=rect.united(rel_view->__boundingRect());
+			else
+				rect=rect.united(item->mapToScene(
+					dynamic_cast<BaseObjectView *>(item)->boundingRect()).boundingRect());
+		}
+
+		return rect;
 	}
 }
 
@@ -790,7 +811,7 @@ void ObjectsScene::addItem(QGraphicsItem *item)
 		if(obj)
 		{
 			obj->setVisible(areLayersActive(obj->getDimensionalLayers()));
-			connect(obj, SIGNAL(s_objectSelected(BaseGraphicObject*,bool)), this, SLOT(emitObjectSelection(BaseGraphicObject*,bool)));
+			connect(obj, SIGNAL(s_objectSelected(BaseGraphicObject*,bool)), this, SLOT(handleObjectSelection(BaseGraphicObject*,bool)));
 		}
 
 		QGraphicsScene::addItem(item);

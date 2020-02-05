@@ -4934,114 +4934,7 @@ Table *DatabaseModel::createTable()
 			lays.push_back(l_id.toUInt());
 		table->setLayer(lays);
 
-		if(xmlparser.accessElement(XmlParser::ChildElement))
-		{
-			do
-			{
-				if(xmlparser.getElementType()==XML_ELEMENT_NODE)
-				{
-					elem=xmlparser.getElementName();
-					xmlparser.savePosition();
-					object=nullptr;
-
-					if(elem==BaseObject::objs_schemas[enum_cast(ObjectType::Column)])
-						object=createColumn();
-					else if(elem==BaseObject::objs_schemas[enum_cast(ObjectType::Constraint)])
-						object=createConstraint(table);
-					else if(elem==BaseObject::objs_schemas[enum_cast(ObjectType::Tag)])
-					{
-						xmlparser.getElementAttributes(aux_attribs);
-						tag=getObject(aux_attribs[Attributes::Name], ObjectType::Tag);
-
-						if(!tag)
-						{
-							throw Exception(Exception::getErrorMessage(ErrorCode::RefObjectInexistsModel)
-											.arg(attribs[Attributes::Name])
-									.arg(BaseObject::getTypeName(ObjectType::Table))
-									.arg(aux_attribs[Attributes::Table])
-									.arg(BaseObject::getTypeName(ObjectType::Tag))
-									, ErrorCode::RefObjectInexistsModel,__PRETTY_FUNCTION__,__FILE__,__LINE__);
-						}
-
-						table->setTag(dynamic_cast<Tag *>(tag));
-					}
-					//Retrieving custom columns / constraint indexes
-					else if(elem==Attributes::CustomIdxs)
-					{
-						xmlparser.getElementAttributes(aux_attribs);
-						obj_type=BaseObject::getObjectType(aux_attribs[Attributes::ObjectType]);
-
-						xmlparser.savePosition();
-
-						if(xmlparser.accessElement(XmlParser::ChildElement))
-						{
-							do
-							{
-								if(xmlparser.getElementType()==XML_ELEMENT_NODE)
-								{
-									elem=xmlparser.getElementName();
-
-									//The element <object> stores the index for each object in the current group
-									if(elem==Attributes::Object)
-									{
-										xmlparser.getElementAttributes(aux_attribs);
-										names.push_back(aux_attribs[Attributes::Name]);
-										idxs.push_back(aux_attribs[Attributes::Index].toUInt());
-									}
-								}
-							}
-							while(xmlparser.accessElement(XmlParser::NextElement));
-
-							table->setRelObjectsIndexes(names, idxs, obj_type);
-							names.clear();
-							idxs.clear();
-						}
-
-						xmlparser.restorePosition();
-					}
-					else if(elem==Attributes::Partitioning)
-					{
-						xmlparser.getElementAttributes(aux_attribs);
-						table->setPartitioningType(aux_attribs[Attributes::Type]);
-						xmlparser.savePosition();
-
-						if(xmlparser.accessElement(XmlParser::ChildElement))
-						{
-							do
-							{
-								if(xmlparser.getElementType()==XML_ELEMENT_NODE &&
-									 xmlparser.getElementName()==Attributes::PartitionKey)
-								{
-										createElement(part_key, nullptr, table);
-										partition_keys.push_back(part_key);
-								}
-							}
-							while(xmlparser.accessElement(XmlParser::NextElement));
-
-							table->addPartitionKeys(partition_keys);
-						}
-
-						xmlparser.restorePosition();
-					}
-					//Retrieving initial data
-					else if(elem==Attributes::InitialData)
-					{
-						xmlparser.savePosition();
-						xmlparser.accessElement(XmlParser::ChildElement);
-						table->setInitialData(xmlparser.getElementContent());
-						xmlparser.restorePosition();
-					}
-
-					if(object)
-						table->addObject(object);
-
-					xmlparser.restorePosition();
-				}
-			}
-			while(xmlparser.accessElement(XmlParser::NextElement));
-		}
-
-		table->setProtected(table->isProtected());
+		return table;
 	}
 	catch(Exception &e)
 	{
@@ -6791,7 +6684,7 @@ Textbox *DatabaseModel::createTextbox()
 		xmlparser.getElementAttributes(attribs);
 
 		txtbox->setFadedOut(attribs[Attributes::FadedOut]==Attributes::True);
-		txtbox->setLayer(attribs[Attributes::Layer].toUInt());
+		txtbox->setLayer({attribs[Attributes::Layer].toUInt()});
 		txtbox->setTextAttribute(Textbox::ItalicText, attribs[Attributes::Italic]==Attributes::True);
 		txtbox->setTextAttribute(Textbox::BoldText, attribs[Attributes::Bold]==Attributes::True);
 		txtbox->setTextAttribute(Textbox::UnderlineText, attribs[Attributes::Underline]==Attributes::True);
@@ -10996,7 +10889,7 @@ TableClass *DatabaseModel::createPhysicalTable()
 		table->setCurrentPage(BaseTable::AttribsSection, attribs[Attributes::AttribsPage].toUInt());
 		table->setCurrentPage(BaseTable::ExtAttribsSection, attribs[Attributes::ExtAttribsPage].toUInt());
 		table->setFadedOut(attribs[Attributes::FadedOut]==Attributes::True);
-		table->setLayer(attribs[Attributes::Layer].toUInt());
+		table->setLayer({attribs[Attributes::Layer].toUInt()});
 
 		if(xmlparser.accessElement(XmlParser::ChildElement))
 		{

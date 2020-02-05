@@ -1355,7 +1355,7 @@ void PhysicalTable::setTableAttributes(unsigned def_type, bool incl_rel_added_ob
 	attributes[Attributes::Partitioning]=~partitioning_type;
 	attributes[Attributes::PartitionKey]=QString();
 	attributes[Attributes::PartitionBoundExpr]=part_bounding_expr;
-	attributes[Attributes::Layer]=QString::number(layer);
+	attributes[Attributes::Layer]=QString::number(layer.front());
 	attributes[Attributes::Pagination]=(pagination_enabled ? Attributes::True : QString());
 	attributes[Attributes::CollapseMode]=QString::number(enum_cast(collapse_mode));
 	attributes[Attributes::AttribsPage]=(pagination_enabled ? QString::number(curr_page[AttribsSection]) : QString());
