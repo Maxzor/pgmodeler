@@ -100,7 +100,7 @@ void TableTitleView::configureObject(BaseGraphicObject *object)
 	font=fmt.font();
 
 	obj_name->setFont(font);
-	obj_name->setText(compact_view && !object->getAlias().isEmpty() ? object->getAlias() : object->getName());
+	obj_name->setText(compact_view ? object->getName() + " - " + object->getComment() : object->getName());
 
 	if(!tag)
 	{
